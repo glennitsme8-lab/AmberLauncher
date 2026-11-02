@@ -145,6 +145,13 @@ private val LIBRARIES = listOf(
         url = "https://github.com/TouchController/TouchController"
     ),
     OpenSourceLibrary(
+        name = "Horizon",
+        copyright = "$COPY 2026 Ludovic Marie & the Horizon contributors",
+        license = "MIT License",
+        role = "Mesin Minecraft Java yang ditulis ulang dalam Rust (port Android oleh Vasysik). Tidak berafiliasi dengan Mojang atau Microsoft",
+        url = "https://github.com/horizon-rust/horizon"
+    ),
+    OpenSourceLibrary(
         name = "Jetpack Compose & Material 3",
         copyright = "$COPY The Android Open Source Project",
         license = "Apache 2.0",

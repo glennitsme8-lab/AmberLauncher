@@ -14,5 +14,5 @@ object AppLinks {
      * Repo GitHub tempat rilis APK diterbitkan ("pemilik/nama"). Dipakai pengecek pembaruan
      * (core/update/UpdateChecker) untuk membaca daftar Release.
      */
-    const val GITHUB_REPO = "ItsVynzzzz/AmberLauncher"
+    const val GITHUB_REPO = BuildConfig.UPDATE_REPO
 }

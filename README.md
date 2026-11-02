@@ -131,6 +131,9 @@ Karena proyek hulunya berlisensi GPL-3.0, seluruh hasil turunannya juga harus te
 | [Fold Craft Launcher](https://github.com/FCL-Team/FoldCraftLauncher) | Tim FCL | GPL-3.0 |
 | [MobileGlues](https://github.com/MobileGlues/MobileGlues) | Tim MobileGlues | LGPL-2.1 |
 | [GL4ES](https://github.com/ptitSeb/gl4es) | ptitSeb | MIT |
+| [Horizon](https://github.com/horizon-rust/horizon) (mesin Minecraft Java dalam Rust; [port Android](https://github.com/Vasysik/horizon-android) oleh Vasysik) | Ludovic Marie dan kontributor Horizon | MIT |
+
+Mesin Horizon tidak disimpan di repo ini: saat build, rilis resmi Horizon diunduh dari GitHub, diperiksa SHA-256-nya, lalu dikemas ke APK bersama berkas lisensinya (`assets/horizon/`). Horizon dan AmberLauncher tidak berafiliasi dengan Mojang atau Microsoft.
 
 Terima kasih juga kepada [Modrinth](https://modrinth.com) atas API publiknya dan [Ely.by](https://ely.by) atas sistem skin dan autentikasinya.
 

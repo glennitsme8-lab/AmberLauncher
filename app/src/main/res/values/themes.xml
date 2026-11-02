@@ -12,4 +12,12 @@
     <style name="Theme.NuxLauncher.Dialog" parent="android:Theme.Material.Light.Dialog">
         <item name="android:windowAnimationStyle">@null</item>
     </style>
+
+    <!-- Layar penuh untuk mesin Horizon (nilai sama dengan tema bawaan Horizon). -->
+    <style name="HorizonGameTheme" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:colorAccent">#9a86ff</item>
+    </style>
 </resources>

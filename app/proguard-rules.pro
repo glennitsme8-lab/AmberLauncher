@@ -22,6 +22,9 @@
 -keep class com.bytedance.** { *; }
 -keep class androidx.graphics.path.** { *; }
 
+# Mesin Horizon: pustaka native-nya mengikat nama kelas dev.horizon.android.* lewat JNI.
+-keep class dev.horizon.android.** { *; }
+
 # Klien proxy TouchController hanya dipanggil lewat refleksi; tanpa ini R8 membuangnya.
 -keep class top.fifthlight.touchcontroller.** { *; }
 

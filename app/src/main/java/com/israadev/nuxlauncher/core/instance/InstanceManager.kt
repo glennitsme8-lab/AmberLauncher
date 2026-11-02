@@ -3,6 +3,7 @@ package com.israadev.nuxlauncher.core.instance
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.israadev.nuxlauncher.BuildConfig
 import com.israadev.nuxlauncher.core.crash.LauncherLog
 import com.israadev.nuxlauncher.core.models.Instance
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,7 @@ object InstanceManager {
         // 1. Primary user-visible storage: /storage/emulated/0/nuxlauncher
         try {
             val extStorage = android.os.Environment.getExternalStorageDirectory()
-            val nuxPublicDir = File(extStorage, "nuxlauncher")
+            val nuxPublicDir = File(extStorage, BuildConfig.DATA_DIR_NAME)
             if (!nuxPublicDir.exists()) {
                 nuxPublicDir.mkdirs()
             }

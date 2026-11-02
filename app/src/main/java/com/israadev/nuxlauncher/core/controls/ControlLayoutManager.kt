@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Environment
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.israadev.nuxlauncher.BuildConfig
 import com.israadev.nuxlauncher.core.controls.models.ControlShowMode
 import com.israadev.nuxlauncher.core.controls.models.CustomControlButton
 import com.movtery.inputmap.keycodes.LwjglGlfwKeycode
@@ -76,7 +77,7 @@ object ControlLayoutManager {
     // ---- Cadangan otomatis ------------------------------------------------------------
     // Disimpan di luar Android/data supaya tetap ada walau aplikasi dihapus.
     // Ditulis hanya saat pengguna menyimpan layout (jarang, berkas kecil) dan di thread latar.
-    private const val BACKUP_DIR = "Documents/LauncherBackup"
+    private const val BACKUP_DIR = BuildConfig.BACKUP_DIR
     private const val BACKUP_FILE = "controls_layout.json"
     private const val BACKUP_PREV_FILE = "controls_layout.prev.json"
 

@@ -30,7 +30,7 @@
         android:name=".NuxApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.NuxLauncher"
@@ -200,6 +200,34 @@
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|navigation"
             android:theme="@style/Theme.NuxLauncher" />
+
+        <!-- Mesin Horizon (Rust): berjalan di proses :horizon sendiri, terpisah dari launcher dan dari game Java.
+             Nama kelas dev.horizon.android.HorizonActivity tidak boleh diganti karena pustaka native mengikatnya. -->
+        <activity
+            android:name="dev.horizon.android.HorizonActivity"
+            android:exported="false"
+            android:process=":horizon"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden|keyboard|density|screenLayout"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/HorizonGameTheme">
+            <meta-data android:name="android.app.lib_name" android:value="horizon_android" />
+        </activity>
+
+        <!-- Sementara, untuk uji coba: ikon kedua "Horizon (uji coba)" di layar HP yang langsung membuka mesin
+             Horizon. Dimatikan di APK 32-bit (mesinnya hanya ada untuk 64-bit). Akan diganti pilihan di dalam launcher. -->
+        <activity-alias
+            android:name=".HorizonTestAlias"
+            android:targetActivity="dev.horizon.android.HorizonActivity"
+            android:label="Horizon (uji coba)"
+            android:enabled="${horizonLauncherEnabled}"
+            android:exported="true">
+            <meta-data android:name="android.app.lib_name" android:value="horizon_android" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Hasil pemasangan pembaruan dari PackageInstaller (hanya sistem yang memegang PendingIntent-nya) -->
         <receiver
