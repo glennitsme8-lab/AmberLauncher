@@ -1,4 +1,6 @@
-name: Build APK
+# VERSI EKSPERIMEN untuk repo uji coba (bukan repo utama): membangun APK debug 64-bit saja,
+# dengan id aplikasi berakhiran ".exp" sehingga bisa dipasang berdampingan dengan AmberLauncher utama.
+name: Build APK (eksperimen)
 
 on:
   workflow_dispatch:
@@ -226,8 +228,8 @@ jobs:
     needs: periksa
     if: needs.periksa.outputs.build == 'true'
     runs-on: ubuntu-24.04
-    # APK 32-bit dibangun setelah APK 64-bit (Gradle kedua + NDK), jadi batas waktunya dilonggarkan
-    timeout-minutes: 80
+    # Hanya APK 64-bit debug (tanpa 32-bit), jadi lebih cepat dari build utama
+    timeout-minutes: 45
 
     steps:
       - name: Ambil kode
@@ -261,6 +263,16 @@ jobs:
           done
           echo "applied=true" >> "$GITHUB_OUTPUT"
 
+      # Pengaman: mode eksperimen (id ".exp", folder data sendiri) ada di kode, bukan di workflow. Bila patch
+      # eksperimen belum diterapkan, APK yang jadi memakai id yang sama dengan aplikasi utama dan bisa
+      # bentrok. Lebih baik berhenti di sini dengan pesan jelas.
+      - name: Pastikan kode eksperimen sudah ada
+        run: |
+          if ! grep -q 'AMBER_EXPERIMENT' app/build.gradle.kts; then
+            echo "::error title=Patch eksperimen belum diterapkan::app/build.gradle.kts belum mengenal mode eksperimen. Upload dulu patch eksperimen (pending-horizon-exp.patch) ke akar repo, lalu jalankan ulang workflow ini."
+            exit 1
+          fi
+
       - name: Periksa keaslian Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
@@ -277,31 +289,65 @@ jobs:
           yes | "$SDKM" --licenses > /dev/null || true
           "$SDKM" "platforms;android-37" || echo "Platform 37 tidak terpasang manual, Gradle akan mengunduh sendiri"
 
-      - name: Siapkan kunci tanda tangan rilis (dari Secrets)
-        env:
-          AMBER_KEYSTORE_BASE64: ${{ secrets.AMBER_KEYSTORE_BASE64 }}
-          AMBER_KEYSTORE_PASSWORD: ${{ secrets.AMBER_KEYSTORE_PASSWORD }}
-          IS_FORK: ${{ github.event.repository.fork }}
+      # Kunci debug bawaan Android dibuat ACAK di tiap run GitHub, jadi tiap APK baru bertanda tangan
+      # berbeda dan Android menolak memasangnya di atas yang lama (harus uninstall dulu, data aplikasi
+      # ikut hilang, termasuk 500 MB data Horizon). Karena itu dipasang satu kunci debug TETAP di bawah.
+      # Kunci ini PUBLIK (ada di berkas ini) dan hanya untuk eksperimen: jangan dipakai untuk rilis sungguhan.
+      - name: Pasang kunci debug tetap (khusus eksperimen)
         run: |
-          if [ -n "$AMBER_KEYSTORE_BASE64" ] && [ -n "$AMBER_KEYSTORE_PASSWORD" ]; then
-            KEYSTORE_PATH="$RUNNER_TEMP/amber-release.p12"
-            printf '%s' "$AMBER_KEYSTORE_BASE64" | tr -d ' \r\n' | base64 -d > "$KEYSTORE_PATH"
-            chmod 600 "$KEYSTORE_PATH"
-            PASS="$(printf '%s' "$AMBER_KEYSTORE_PASSWORD" | tr -d ' \r\n')"
-            if ! keytool -list -v -keystore "$KEYSTORE_PATH" -storetype PKCS12 -storepass "$PASS" -alias amber > "$RUNNER_TEMP/keytool.txt" 2>&1; then
-              echo "::error::Kunci rilis tidak bisa dibuka. Periksa isi Secrets AMBER_KEYSTORE_BASE64 dan AMBER_KEYSTORE_PASSWORD (harus persis sama dengan isi file yang diberikan)."
-              exit 1
-            fi
-            echo "Kunci rilis terpasang. Sidik jari sertifikat:"
-            grep -E "SHA256:" "$RUNNER_TEMP/keytool.txt" || true
-            rm -f "$RUNNER_TEMP/keytool.txt"
-            echo "AMBER_KEYSTORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
-          elif [ "$IS_FORK" = "true" ]; then
-            echo "Kunci rilis tidak ada (wajar untuk fork). APK ditandatangani kunci debug."
-          else
-            echo "::error::Kunci tanda tangan rilis belum dipasang. Isi Secrets AMBER_KEYSTORE_BASE64 dan AMBER_KEYSTORE_PASSWORD di Settings > Secrets and variables > Actions."
-            exit 1
-          fi
+          mkdir -p "$HOME/.android"
+          base64 -d > "$HOME/.android/debug.keystore" <<'KEYSTORE_EOF'
+          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
+          KEYSTORE_EOF
+          chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | head -n 3
 
       # Dijalankan setelah patch diterapkan, supaya berkas VERSION dari patch ikut terbaca.
       # Nomor build = nomor terakhir pada tag v<VERSION>.<n> ditambah 1 (mulai dari 1). Run yang
@@ -330,56 +376,31 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       # Keluaran Gradle disimpan ke berkas supaya kesalahan kompilasi bisa dirangkum bila build gagal.
-      - name: Build APK release
+      - name: Build APK debug (eksperimen)
         env:
-          AMBER_KEYSTORE_PASSWORD: ${{ secrets.AMBER_KEYSTORE_PASSWORD }}
+          AMBER_EXPERIMENT: "1"
           AMBER_VERSION_NAME: ${{ env.VERSION_NAME }}
           # Kunci API CurseForge dari Secrets; ikut dibuild ke APK (kosong = pengguna mengisi sendiri di aplikasi)
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log"
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log"
 
       - name: Siapkan file APK
         run: |
-          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -n 1)
           test -n "$APK"
           mkdir -p dist
-          # Nama berkas sengaja panjang dan jelas supaya pengguna tidak salah pilih 32-bit/64-bit.
-          # Aplikasi memilih APK pembaruan lewat kata "32bit" di nama (lihat ReleaseParser): APK 64-bit
-          # tidak boleh memuat "32bit", APK 32-bit wajib memuatnya.
-          cp "$APK" "dist/AmberLauncher-${VERSION_NAME}-64bit-arm64-v8a-RECOMMENDED.apk"
+          # Nama tanpa kata "32bit": pengecek pembaruan aplikasi menganggapnya APK 64-bit.
+          OUT="dist/AmberLauncher-${VERSION_NAME}-64bit-arm64-v8a-EXPERIMENT-debug.apk"
+          cp "$APK" "$OUT"
           ls -lh dist
           APKSIGNER=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
           if [ -n "$APKSIGNER" ]; then
-            echo "Sidik jari tanda tangan APK:"
-            "$APKSIGNER" verify --print-certs "dist/AmberLauncher-${VERSION_NAME}-64bit-arm64-v8a-RECOMMENDED.apk" | grep -i "SHA-256" || true
+            echo "Sidik jari tanda tangan APK (harus SAMA di setiap build supaya bisa dipasang sebagai pembaruan):"
+            "$APKSIGNER" verify --print-certs "$OUT" | grep -i "SHA-256" || true
           fi
-
-      # APK 32-bit dibangun terpisah (scripts/build-arm32.sh, ada setelah patch 32-bit diterapkan) dan
-      # TIDAK boleh menggagalkan APK 64-bit: bila langkah ini gagal, rilis tetap terbit dengan APK
-      # 64-bit saja dan penyebabnya bisa dibaca di log langkah ini. Skrip bekerja di salinan repo,
-      # jadi pohon kerja asli tidak berubah.
-      - name: Bangun APK 32-bit (armeabi-v7a)
-        if: hashFiles('scripts/build-arm32.sh') != ''
-        continue-on-error: true
-        env:
-          AMBER_KEYSTORE_PASSWORD: ${{ secrets.AMBER_KEYSTORE_PASSWORD }}
-          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-        run: bash scripts/build-arm32.sh
-
-      # Skrip 32-bit menamai hasilnya "...-32bit.apk"; di sini diganti ke nama yang jelas bagi pengguna.
-      # Tanpa APK 32-bit (langkah di atas gagal atau tidak ada) langkah ini tidak melakukan apa-apa.
-      - name: Beri nama jelas pada APK 32-bit
-        run: |
-          SRC="dist/AmberLauncher-${VERSION_NAME}-32bit.apk"
-          if [ -f "$SRC" ]; then
-            mv "$SRC" "dist/AmberLauncher-${VERSION_NAME}-32bit-armeabi-v7a-OLD-PHONES-ONLY.apk"
-          else
-            echo "Tidak ada APK 32-bit pada build ini; rilis hanya membawa APK 64-bit."
-          fi
-          ls -lh dist
 
       - name: Simpan sebagai artifact
         uses: actions/upload-artifact@v4
@@ -430,27 +451,24 @@ jobs:
             LOG="$(git log --no-merges --pretty='%s' -n 15 || true)"
           fi
           LOG="$(printf '%s\n' "$LOG" | grep -v -E '^(Terapkan patch \(build lolos\)|Add files? via upload|Delete .+ via upload|(Create|Update|Delete|Rename) [^ ]+\.[A-Za-z0-9]+)$' | grep -v '^$' || true)"
-          APK64="AmberLauncher-${VERSION_NAME}-64bit-arm64-v8a-RECOMMENDED.apk"
-          APK32="AmberLauncher-${VERSION_NAME}-32bit-armeabi-v7a-OLD-PHONES-ONLY.apk"
+          APK64="AmberLauncher-${VERSION_NAME}-64bit-arm64-v8a-EXPERIMENT-debug.apk"
           BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
-          # Catatan rilis ditulis dalam bahasa Inggris supaya mudah dipahami semua orang. Baris panduan
-          # unduhan sengaja memuat tautan "https://" atau diawali "#": aplikasi menyaring baris seperti itu
-          # saat menampilkan catatan di pop-up pembaruan, jadi panduan ini tidak ikut muncul di sana.
+          # Baris panduan sengaja memuat tautan "https://" atau diawali "#": aplikasi menyaring baris
+          # seperti itu saat menampilkan catatan di pop-up pembaruan.
           {
-            echo "## What's new in ${VERSION_NAME}"
+            echo "## Experimental build ${VERSION_NAME} (debug)"
             echo
             if [ -n "$LOG" ]; then
               printf '%s\n' "$LOG" | sed 's/^/- /'
             else
-              echo "- Fixes and small improvements."
+              echo "- Experimental changes."
             fi
             echo
-            echo "### Which file should I download?"
+            echo "### About this file"
             echo
-            echo "- **64-bit (arm64-v8a): pick this one if you are not sure.** [${APK64}](${BASE}/${APK64}) Works on almost every phone made in the last several years."
-            if ls dist/*-32bit-*.apk > /dev/null 2>&1; then
-              echo "- **32-bit (armeabi-v7a): old phones only.** [${APK32}](${BASE}/${APK32}) For old phones with a 32-bit CPU. It is slower, game RAM is limited to about 1.2 GB, and some renderers are missing. Only pick it if the 64-bit file will not install on your phone."
-            fi
+            echo "- Experiment only. Installs next to the main app as AmberLauncher Exp (separate app, separate data). [${APK64}](${BASE}/${APK64})"
+            echo "- Debug build for 64-bit phones. It is bigger and slower than a normal release, so FPS numbers here are lower than the real app."
+            echo "- Signed with a public debug key. Never use this key for a real release."
             if [ -n "$PREV_TAG" ]; then
               echo
               echo "Full changelog: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${RELEASE_TAG}"
@@ -458,10 +476,9 @@ jobs:
           } > "$NOTES"
           cat "$NOTES"
 
-          # Versi dengan tanda "-" (mis. 0.1.0-beta.3) ditandai pra-rilis
-          PRE=""
-          case "$VERSION_NAME" in *-*) PRE="--prerelease" ;; esac
-          if ! gh release create "$RELEASE_TAG" dist/*.apk --target "$(git rev-parse HEAD)" --title "AmberLauncher ${VERSION_NAME}" --notes-file "$NOTES" $PRE; then
+          # Build eksperimen selalu ditandai pra-rilis
+          PRE="--prerelease"
+          if ! gh release create "$RELEASE_TAG" dist/*.apk --target "$(git rev-parse HEAD)" --title "AmberLauncher ${VERSION_NAME} (eksperimen)" --notes-file "$NOTES" $PRE; then
             # Bila dijalankan ulang dan rilisnya sudah ada, cukup timpa berkas APK-nya
             gh release upload "$RELEASE_TAG" dist/*.apk --clobber
           fi
